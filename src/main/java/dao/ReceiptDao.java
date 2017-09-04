@@ -1,12 +1,13 @@
 package dao;
 
-import api.ReceiptResponse;
 import generated.tables.records.ReceiptsRecord;
 import org.jooq.Configuration;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -21,8 +22,8 @@ public class ReceiptDao {
 
     public int insert(String merchantName, BigDecimal amount) {
         ReceiptsRecord receiptsRecord = dsl
-                .insertInto(RECEIPTS, RECEIPTS.MERCHANT, RECEIPTS.AMOUNT)
-                .values(merchantName, amount)
+                .insertInto(RECEIPTS, RECEIPTS.MERCHANT, RECEIPTS.AMOUNT, RECEIPTS.TAG)
+                .values(merchantName, amount, "")
                 .returning(RECEIPTS.ID)
                 .fetchOne();
 
@@ -34,4 +35,48 @@ public class ReceiptDao {
     public List<ReceiptsRecord> getAllReceipts() {
         return dsl.selectFrom(RECEIPTS).fetch();
     }
+
+    public void tag(String tagName, int receiptNumber) {
+        final ReceiptsRecord receiptsRecord = dsl
+                .selectFrom(RECEIPTS)
+                .where(RECEIPTS.ID
+                .eq(receiptNumber))
+                .fetchOne();
+
+        String newList = removeElementFromReceiptRecordTag(receiptsRecord, tagName);
+        if (newList != null) {
+            dsl.update(RECEIPTS)
+                    .set(RECEIPTS.TAG, newList)
+                    .where(RECEIPTS.ID
+                    .eq(receiptNumber))
+                    .execute();
+        } else {
+            dsl.update(RECEIPTS)
+                    .set(RECEIPTS.TAG, receiptsRecord.getTag().concat("," + tagName))
+                    .where(RECEIPTS.ID
+                    .eq(receiptNumber))
+                    .execute();
+        }
+    }
+
+    public List<ReceiptsRecord> getAllTaggedReceipts(String tag) {
+        return dsl.selectFrom(RECEIPTS)
+                .where(RECEIPTS.TAG.contains(tag))
+                .fetch();
+    }
+
+    public static String removeElementFromReceiptRecordTag(ReceiptsRecord receiptsRecord, String unTag) {
+        if (receiptsRecord != null && receiptsRecord.getTag() != null) {
+            String[] tags = receiptsRecord.getTag().split(",");
+            List<String> tagList = new LinkedList<String>(Arrays.asList(tags));
+            if (tagList.contains(unTag)) {
+                tagList.remove(unTag);
+                String idList = tagList.toString();
+                return idList.substring(1, idList.length() - 1).replace(", ", ",");
+            }
+        }
+
+        return null;
+    }
+
 }
