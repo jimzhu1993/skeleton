@@ -1,5 +1,8 @@
-
 import controllers.*;
+//import controllers.HelloWorldController;
+//import controllers.ReceiptController;
+//import controllers.TagController;
+//import controllers.StaticHtmlController;
 import dao.JooqConfig;
 import dao.ReceiptDao;
 import dao.TagDao;
@@ -30,7 +33,7 @@ public class SimpleApplication extends Application<Configuration> {
         env.jersey().register(new ReceiptController(receiptDao, tagDao));
         env.jersey().register(new TagController(tagDao));
         env.jersey().register(new StaticHtmlController());
-        env.jersey().register(new ReceiptController(receiptDao));
+//        env.jersey().register(new ReceiptController(receiptDao));
         env.jersey().register(new ReceiptImageController());
         SimpleApplication.enableSessionSupport(env);
     }
