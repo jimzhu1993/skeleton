@@ -133,7 +133,7 @@
         .tagValue {
             border-radius: 30px;
             margin-left: 10px;
-            height:50px;
+            height:25px;
             /*float: right;*/
             border: 2px solid #000000;
             font-size: 1em;
@@ -290,18 +290,7 @@
 //                        if(text.parentNode.getElementsByClassName("tagValue")[i].text == text.value)
 //                            return
 //                    }
-                    $.ajax(
-                        {
-                            type: "PUT",
-                            contentType: "application/json; charset=utf-8",
-                            url: api + "/tags/" + text.value,
-                            dataType: "json",
-                            data: JSON.stringify(parseInt(text.name)),
-                            success: function(){
-                                refreshReceipts();
-                            },
-                        }
-                    );
+                    toggleTag(text,input)
                 }
             });
             document.getElementById(input.name).appendChild(text)
@@ -330,7 +319,7 @@
                         tagButton.name = receipt.id
                         tagButton.text = tag
                         tagButton.addEventListener('click', function(){
-                            toggleTag(tag, this)
+                            removeTag(tag, tagButton.name)
                         });
                         document.getElementById(receipt.id).appendChild(tagButton)
                     });
@@ -358,22 +347,59 @@
                 }
             );
         }
-
-        function toggleTag(tag, input) {
-            $.ajax(
-                {
-                    type: "PUT",
-                    contentType: "application/json; charset=utf-8",
-                    url: api + "/tags/" + tag,
-                    dataType: "json",
-                    data: JSON.stringify(parseInt(input.name)),
-//                    load tag on success adding by sync front-back
-                    success: function(){
-                        refreshReceipts();
-                    },
+        function removeTag(tag, receiptId){
+            $.ajax({
+                url: api + "/tags/" + tag,
+                dataType: 'json',
+                type: 'PUT',
+                data: JSON.stringify(parseInt(receiptId)),
+                contentType: 'application/json;charset=utf-8',
+                success: function () {
+                    //alert()
+                    refreshReceipts();
                 }
-            );
+            })
+
+        };
+
+        function toggleTag(tagName,button){
+            tag = tagName.value
+            receipt = tagName.name
+            $.ajax({
+                url: api + "/tags/" + tag,
+                dataType: 'json',
+                type: 'PUT',
+                data: JSON.stringify(parseInt(receipt)),
+                contentType: 'application/json;charset=utf-8',
+                success:function () {
+                    var tagHtml = '<button class="tagValue" onclick="removeTagHtml(this, receipt)">' + tag + '</button>';
+                    $(tagHtml).appendTo(document.getElementById(button.name));
+                    document.getElementById(button.name).removeChild(tagName);
+                    refreshReceipts();
+                }
+            });
         }
+
+        function removeTagHtml(input, id) {
+            tag = input.textContent
+            removeTag(tag, id);
+            input.remove();
+        }
+//        function toggleTag(tag, input) {
+//            $.ajax(
+//                {
+//                    type: "PUT",
+//                    contentType: "application/json; charset=utf-8",
+//                    url: api + "/tags/" + tag,
+//                    dataType: "json",
+//                    data: JSON.stringify(parseInt(input.name)),
+////                    load tag on success adding by sync front-back
+//                    success: function(){
+//                        refreshReceipts();
+//                    },
+//                }
+//            );
+//        }
 
         function toggleAddReceiptDialogue() {
             block = document.getElementById("addReceiptDialogue").firstChild;
