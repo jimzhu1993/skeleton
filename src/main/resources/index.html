@@ -178,6 +178,9 @@
         }
 
         function startVideo() {
+            // reset the place holder
+            toggleAddReceiptDialogue();
+            toggleAddReceiptDialogue();
             $("#vidwrap").show();
             navigator.mediaDevices.getUserMedia({video: {facingMode: {exact: "environment"}}})
                 .then(attachMediaStream)
