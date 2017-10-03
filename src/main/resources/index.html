@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <link rel="stylesheet" href="./style.css"/>
+    <!--<link rel="stylesheet" href="./style.css"/>-->
     <script data-require="jquery@*" data-semver="3.1.1" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <style>
         body {
@@ -15,7 +15,9 @@
         #heading{
             /*2px border 60+2 */
             height:62px;
-            width:500px;
+            width:900px;
+            display:block;
+            /*double click otherwise*/
         }
         #container {
             border: 2px solid black;
@@ -83,18 +85,18 @@
             text-align: center;
             margin-left: 10px;
         }
-        #add-receipt {
-            background-color: #ff9828;
-            border: 2px solid #000000;
-            border-radius: 10px;
-            width: 160px;
-            height: 60px;
-            font-size: 4em;
-            color: white;
-            text-align: center;
-            vertical-align: middle;
-            line-height: 60px;
-        }
+        /*#add-receipt {*/
+            /*background-color: #ff9828;*/
+            /*border: 2px solid #000000;*/
+            /*border-radius: 10px;*/
+            /*width: 160px;*/
+            /*height: 60px;*/
+            /*font-size: 3em;*/
+            /*color: white;*/
+            /*text-align: center;*/
+            /*vertical-align: middle;*/
+            /*line-height: 50px;*/
+        /*}*/
         #receiptList {
             clear: both;
         }
@@ -142,15 +144,24 @@
         video {
             width: 550px;
             height: 450px;
-            border: 1px solid black;
+            /*border: 1px solid black;*/
         }
 
         #vidwrap {
             margin: 20px 0;
         }
 
-        #start, #snapshot {
-            height: 3em;
+        #start-camera, #take-pic, #take-pic-cancel,#add-receipt {
+            background-color: #ff9828;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            width: 160px;
+            height: 60px;
+            font-size: 1em;
+            color: white;
+            text-align: center;
+            vertical-align: middle;
+            line-height: 60px;
         }
 
     </style>
@@ -167,6 +178,7 @@
         }
 
         function startVideo() {
+            $("#vidwrap").show();
             navigator.mediaDevices.getUserMedia({video: {facingMode: {exact: "environment"}}})
                 .then(attachMediaStream)
                 .catch(error => {
@@ -178,6 +190,11 @@
         })
         }
 
+        function cancelVideo() {
+            this.disabled =true //incase of spamming cancel without starting
+            track.stop();
+            $("#vidwrap").hide();
+        }
         function takeSnapshot() {
             // create a CANVAS element that is same size as the image
             imageCapture.grabFrame()
@@ -193,12 +210,35 @@
                 type: "POST",
                 data: base64EncodedImageData,
                 contentType: "text/plain",
-                success: function() {},
+                success: function(data) {
+                    console.log(data.merchantName,data.amount);
+                    block = document.getElementById("addReceiptDialogue").firstChild;
+                    if (block == null) {
+                        dialog = $(`<div id = container>
+                  <p><input class = "textInputBox" type="text" id="merchant" </p>
+                  <p><input class = "textInputBox" type="text" id="amount" </p>
+                  <div><input type="button" id="cancel-receipt" value="Cancel" onclick = "toggleAddReceiptDialogue()">
+                  <input type="button" id="save-receipt" value="Save" onclick = "addReceipt()"></div></div>`
+                        )
+                        dialog.appendTo($("#addReceiptDialogue"))
+                        document.getElementById("merchant").value = data.merchantName;
+                        document.getElementById("amount").value = data.amount;
+                    }else{
+                        document.getElementById("merchant").value = data.merchantName;
+                        document.getElementById("amount").value = data.amount;
+                        console.log(block)
+                    }
+                },
             })
-                .then(response => {
-                $('video').after(`<div>got response: <pre>${JSON.stringify(response)}</pre></div>`);
-        })
-        .always(() => console.log('request complete'));
+            // get rid of video block after take picture
+            this.disabled =true //incase of spamming capture without starting
+            track.stop();
+            $("#vidwrap").hide();
+
+//                .then(response => {
+//                $('video').after(`<div>got response: <pre>${JSON.stringify(response)}</pre></div>`);
+//        })
+//        .always(() => console.log('request complete'));
 
             // For debugging, you can uncomment this to see the frame that was captured
             // $('BODY').append(canvas);
@@ -208,9 +248,13 @@
 
 
         $(function () {
-            $('#start').on('click', startVideo);
-            $('video').on('play', () => $('#snapshot').prop('disabled', false));
-            $('#snapshot').on('click', takeSnapshot);
+            $('#add-receipt').on('click',toggleAddReceiptDialogue);
+            $('#cancel-receipt').on('click',toggleAddReceiptDialogue);
+            $('#start-camera').on('click', startVideo);
+            $('video').on('play', () => $('#take-pic').prop('disabled', false));
+            $('#take-pic').on('click', takeSnapshot);
+            $('video').on('play', () => $('#take-pic-cancel').prop('disabled', false));
+            $('#take-pic-cancel').on('click',cancelVideo);
         });
 
         const api = "";
@@ -329,9 +373,7 @@
         }
 
         function toggleAddReceiptDialogue() {
-            block = document
-                .getElementById("addReceiptDialogue")
-                .firstChild
+            block = document.getElementById("addReceiptDialogue").firstChild;
             if (block == null) {
                 $(`<div id = container>
                   <p><input class = "textInputBox" type="text" id="merchant" placeholder="merchant"></p>
@@ -339,16 +381,31 @@
                   <div><input type="button" id="cancel-receipt" value="Cancel" onclick = "toggleAddReceiptDialogue()">
                   <input type="button" id="save-receipt" value="Save" onclick = "addReceipt()"></div></div>`)
                 .appendTo($("#addReceiptDialogue"))
-            } else {block.parentNode.removeChild(block)}}
+            } else {
+                if(block.firstChild == null){
+//                    some wierld bug that makse the block first child being ""
+                    block.parentNode.removeChild(block)
+                    $(`<div id = container>
+                  <p><input class = "textInputBox" type="text" id="merchant" placeholder="merchant"></p>
+                  <p><input class = "textInputBox" type="text" id="amount" placeholder="amount"></p>
+                  <div><input type="button" id="cancel-receipt" value="Cancel" onclick = "toggleAddReceiptDialogue()">
+                  <input type="button" id="save-receipt" value="Save" onclick = "addReceipt()"></div></div>`)
+                        .appendTo($("#addReceiptDialogue"))
+                }else {
+                    block.parentNode.removeChild(block)
+                }
+            }}
     </script>
 </head>
 <body>
 <h1>My Receipts</h1>
 <DIV id="heading">
     <!--firstBlock-->
-    <div class="button" id = "add-receipt" onclick = "toggleAddReceiptDialogue()">+</div>
-    <button id="start">Start Video</button>
-    <button id="snapshot" disabled="true">Take a Snapshot!</button>
+    <button id="start-camera">start-camera</button>
+    <button id="take-pic" disabled="true">take-pic</button>
+    <button id="take-pic-cancel" disabled="true">take-pic-cancel</button>
+    <!--<button id="add-receipt" onclick = "toggleAddReceiptDialogue()"> + </button>-->
+    <button id="add-receipt"> + </button>
 </DIV>
 <DIV id="mainBox">
     <!--secondBlock-->
